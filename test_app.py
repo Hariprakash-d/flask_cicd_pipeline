@@ -4,7 +4,7 @@ import os
 # Set the environment variable before importing the app
 os.environ["FLASK_ENV"] = "testing"
 
-from app import app, mongo, db
+from app import app, db
 from bson.objectid import ObjectId
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def client():
 
     # Teardown: drop DB after test
     with app.app_context():
-        mongo.cx.drop_database("test_student_db")
+        db.client.drop_database("test_student_db")
 
 
 def test_home_page(client):
@@ -57,7 +57,7 @@ def test_delete_student(client):
     """Test deleting a student"""
     # Add a temporary student
     with app.app_context():
-        student_id = mongo.db.students.insert_one({
+        student_id = db.students.insert_one({
             "name": "Temp User",
             "email": "temp@user.com",
             "course": "Temp Course"
