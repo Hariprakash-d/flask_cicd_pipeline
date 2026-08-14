@@ -29,6 +29,8 @@ jobs:
 
     # Stage 3: Test (Strict gate configuration)
     - name: Run Pytest Tests
+      env:
+        MONGO_URI: mongodb://localhost:27017/test_student_db
       run: pytest test_app.py
 
     # AWS Authentication Step
