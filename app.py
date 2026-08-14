@@ -9,13 +9,20 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
-app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb://localhost:27017/student_db")
+
+if os.environ.get("FLASK_ENV") == "testing":
+    app.config["MONGO_URI"] = "mongodb://localhost:27017/test_student_db"
+else:
+    app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
+
+#app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb://localhost:27017/student_db")
 app.secret_key = os.getenv("SECRET_KEY")
 
 # Use certifi CA bundle explicitly for cross-platform TLS reliability
 # (notably fixes common macOS certificate verification failures).
 #mongo = PyMongo(app, tlsCAFile=certifi.where())
 mongo = PyMongo(app)
+db = mongo.db  # This represents your database connection engine
 
 # Home page -> list students
 @app.route('/')
