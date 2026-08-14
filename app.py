@@ -59,6 +59,25 @@ def delete_student(student_id):
     mongo.db.students.delete_one({"_id": ObjectId(student_id)})
     return redirect(url_for('index'))
 
+# health check endpoint for deployment verification
+@app.route('/health')
+def health():
+    try:
+        # This checks if the MongoDB client can successfully ping/connect to the database
+        # It serves as your deployment verification gate
+        from pymongo import MongoClient
+        import os
+        
+        # Pulls URI from environment variables securely
+        mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017/student_db")
+        client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
+        client.admin.command('ping') 
+        
+        return {"status": "healthy", "database": "connected"}, 200
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}, 500
+
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=True, port=5000)
 

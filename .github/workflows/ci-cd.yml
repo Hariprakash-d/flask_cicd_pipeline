@@ -1,0 +1,133 @@
+name: CI-CD Student Registration Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  AWS_REGION: ap-southeast-2                    # Match your AWS region
+  ECR_REPOSITORY: flask-app                # Match your ECR repository name
+  SMTP_SERVER: ://gmail.com
+  SMTP_PORT: 465
+  SMTP_USER: hari.dprakash@gmail.com          # Replace with your email address
+  NOTIFY_EMAIL: hari.dprakash@gmail.com       # Replace with your notification address
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+    
+    # Stage 1: Checkout
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    # Stage 2: Install
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+    # Stage 3: Test (Strict gate configuration)
+    - name: Run Pytest Tests
+      run: pytest test_app.py
+
+    # AWS Authentication Step
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Log in to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    # Stage 4 & 5: Build and Push with Git SHA Tag
+    - name: Build and Push Docker Image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    # Stage 6: Deploy to EC2 (With explicit container persistence flag)
+    - name: Remote Deploy to Amazon EC2 Instance
+      uses: appleboy/ssh-action@v1.0.3
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+        MONGO_ENV_URI: ${{ secrets.MONGO_URI }}
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,AWS_REGION,MONGO_ENV_URI
+        script: |
+          # Log into ECR on remote host
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+          
+          # Clean down existing app containers gently
+          docker stop student-app || true
+          docker rm student-app || true
+          
+          # Run the new target image with required persistent configurations
+          docker run -d \
+            --name student-app \
+            -p 5000:5000 \
+            -e MONGO_URI="$MONGO_ENV_URI" \
+            --restart unless-stopped \
+            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    # Stage 7: Verify (Poll the /health endpoint gate)
+    - name: Verify Live Deployment Gate
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "Waiting for web server initialization..."
+          sleep 7
+          curl --fail http://localhost:5000/health
+
+    # Stage 8a: Notification - Success Path Custom Body
+    - name: Notify Success Outcome
+      if: success()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: ${{ env.SMTP_SERVER }}
+        server_port: ${{ env.SMTP_PORT }}
+        username: ${{ env.SMTP_USER }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: '[PIPELINE SUCCESS] Production Deployment Completed'
+        to: ${{ env.NOTIFY_EMAIL }}
+        from: GitHub Actions Core Agent
+        body: |
+          The pipeline ran successfully!
+          
+          Metadata Artifacts:
+          - Target Branch: ${{ github.ref_name }}
+          - Git Commit SHA: ${{ github.sha }}
+          - Docker Image Tag: ${{ github.sha }}
+          - Service URL Target: http://${{ secrets.EC2_HOST }}:5000
+
+    # Stage 8b: Notification - Failure Path Custom Body
+    - name: Notify Failure Outcome
+      if: failure()
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: ${{ env.SMTP_SERVER }}
+        server_port: ${{ env.SMTP_PORT }}
+        username: ${{ env.SMTP_USER }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: '[PIPELINE FAILURE] Build Process Broken!'
+        to: ${{ env.NOTIFY_EMAIL }}
+        from: GitHub Actions Core Agent
+        body: |
+          The CI/CD workflow was interrupted or failed a verification gate.
+          
+          Metadata:
+          - Broken Commit SHA: ${{ github.sha }}
+          - Execution Log Tracking Link: https://github.com{{ github.repository }}/actions/runs/${{ github.run_id }}
