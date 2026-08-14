@@ -24,7 +24,7 @@ app.secret_key = os.getenv("SECRET_KEY")
 # (notably fixes common macOS certificate verification failures).
 #mongo = PyMongo(app, tlsCAFile=certifi.where())
 mongo = PyMongo(app)
-db = mongo.db  # This represents your database connection engine
+#db = mongo.db  # This represents your database connection engine
 
 client = MongoClient(mongo_uri)
 db = client["student_db"] 

@@ -4,7 +4,7 @@ import os
 # Set the environment variable before importing the app
 os.environ["FLASK_ENV"] = "testing"
 
-from app import app, mongo
+from app import app, mongo, db
 from bson.objectid import ObjectId
 
 @pytest.fixture
@@ -15,8 +15,8 @@ def client():
 
     # Setup: clear and create test data
     with app.app_context():
-        mongo.db.students.delete_many({})
-        mongo.db.students.insert_one({
+        db.students.delete_many({})
+        db.students.insert_one({
             "_id": ObjectId("66fddff25f4b5f6a0a123456"),
             "name": "Test Student",
             "email": "test@student.com",
