@@ -106,8 +106,8 @@ jobs:
       if: success()
       uses: dawidd6/action-send-mail@v3
       with:
-        server_address: ${{ env.SMTP_SERVER }}
-        server_port: ${{ env.SMTP_PORT }}
+        server_address: smtp.gmail.com  # 💡 Direct string fix (No prefixes, no vars)
+        server_port: 465
         username: ${{ env.SMTP_USER }}
         password: ${{ secrets.SMTP_PASSWORD }}
         subject: '[PIPELINE SUCCESS] Production Deployment Completed'
@@ -127,8 +127,8 @@ jobs:
       if: failure()
       uses: dawidd6/action-send-mail@v3
       with:
-        server_address: ${{ env.SMTP_SERVER }}
-        server_port: ${{ env.SMTP_PORT }}
+        server_address: smtp.gmail.com  # 💡 Direct string fix (No prefixes, no vars)
+        server_port: 465
         username: ${{ env.SMTP_USER }}
         password: ${{ secrets.SMTP_PASSWORD }}
         subject: '[PIPELINE FAILURE] Build Process Broken!'
@@ -140,3 +140,4 @@ jobs:
           Metadata:
           - Broken Commit SHA: ${{ github.sha }}
           - Execution Log Tracking Link: https://github.com{{ github.repository }}/actions/runs/${{ github.run_id }}
+
