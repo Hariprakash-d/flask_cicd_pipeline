@@ -98,7 +98,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           echo "Waiting for web server initialization..."
-          sleep 7
+          sleep 15
           curl --fail http://localhost:5000/health
 
     # Stage 8a: Notification - Success Path Custom Body
