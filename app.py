@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from dotenv import load_dotenv
 import certifi
 import os
+from pymongo import MongoClient
 
 # Load env vars
 load_dotenv()
@@ -11,10 +12,11 @@ load_dotenv()
 app = Flask(__name__)
 
 if os.environ.get("FLASK_ENV") == "testing":
-    app.config["MONGO_URI"] = "mongodb://localhost:27017/test_student_db"
+    mongo_uri = "mongodb://localhost:27017/test_student_db"
 else:
-    app.config["MONGO_URI"] = os.environ.get("MONGO_URI")
+    mongo_uri = os.environ.get("MONGO_URI")
 
+app.config["MONGO_URI"] = mongo_uri
 #app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb://localhost:27017/student_db")
 app.secret_key = os.getenv("SECRET_KEY")
 
@@ -24,10 +26,13 @@ app.secret_key = os.getenv("SECRET_KEY")
 mongo = PyMongo(app)
 db = mongo.db  # This represents your database connection engine
 
+client = MongoClient(mongo_uri)
+db = client["student_db"] 
+
 # Home page -> list students
 @app.route('/')
 def index():
-    students = mongo.db.students.find()
+    students = db.students.find()
     return render_template('index.html', students=students)
 
 # Add student
@@ -37,7 +42,7 @@ def add_student():
         name = request.form['name']
         email = request.form['email']
         course = request.form['course']
-        mongo.db.students.insert_one({
+        db.students.insert_one({
             "name": name,
             "email": email,
             "course": course
