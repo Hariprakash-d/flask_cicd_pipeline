@@ -53,12 +53,12 @@ def add_student():
 # Update student
 @app.route('/update/<student_id>', methods=['GET', 'POST'])
 def update_student(student_id):
-    student = mongo.db.students.find_one({"_id": ObjectId(student_id)})
+    student = db.students.find_one({"_id": ObjectId(student_id)})
     if request.method == 'POST':
         new_name = request.form['name']
         new_email = request.form['email']
         new_course = request.form['course']
-        mongo.db.students.update_one(
+        db.students.update_one(
             {"_id": ObjectId(student_id)},
             {"$set": {"name": new_name, "email": new_email, "course": new_course}}
         )
@@ -69,7 +69,7 @@ def update_student(student_id):
 # Delete student
 @app.route('/delete/<student_id>')
 def delete_student(student_id):
-    mongo.db.students.delete_one({"_id": ObjectId(student_id)})
+    db.students.delete_one({"_id": ObjectId(student_id)})
     return redirect(url_for('index'))
 
 # health check endpoint for deployment verification
