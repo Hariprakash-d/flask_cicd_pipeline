@@ -1,5 +1,5 @@
 import pytest
-from bson.ObjectId import ObjectId
+from bson.objectId import ObjectId
 from app import app, db
 
 @pytest.fixture
