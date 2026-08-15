@@ -1,9 +1,4 @@
 import pytest
-import os
-
-# Set the environment variable before importing the app
-os.environ["FLASK_ENV"] = "testing"
-
 from bson.ObjectId import ObjectId
 from app import app, db
 
