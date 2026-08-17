@@ -90,6 +90,10 @@ project/
 │
 ├── app.py
 ├── requirements.txt
+├── test_app.py
+├── Dockerfile
+├── .github/workflows/
+|      └── ci-cd.yml
 └── .env
 ```
 
